@@ -7,8 +7,8 @@ Este é um projeto de API que permite consultar cotações de frete utilizando d
 
 Desenvolver uma API Rest que oferece duas rotas principais para consulta de cotações e métricas de frete:
 
-1. **Rota 1**: Realiza uma cotação de frete fictícia utilizando a API da Frete Rápido, armazena as cotações no banco de dados e retorna as informações de preço e transportadora.
-2. **Rota 2**: Retorna métricas sobre as cotações armazenadas no banco de dados, como o preço médio, total por transportadora, e os fretes mais baratos e caros.
+1. **quotes**: Realiza uma cotação de frete fictícia utilizando a API da Frete Rápido, armazena as cotações no banco de dados e retorna as informações de preço e transportadora.
+2. **metrics**: Retorna métricas sobre as cotações armazenadas no banco de dados, como o preço médio, total por transportadora, e os fretes mais baratos e caros.
 
 ## Funcionalidades
 
