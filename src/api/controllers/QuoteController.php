@@ -1,22 +1,31 @@
 <?php
 
 require_once __DIR__ . '/../services/FreteRapidoService.php';
-require_once dirname(__DIR__) . '/db/database.php';
+
+if (!defined('TESTING')) {
+    require_once dirname(__DIR__) . '/db/database.php';
+}
 
 class QuoteController
 {
     private $freteService;
+    private $pdo;
 
-    public function __construct($freteService = null)
+    public function __construct($freteService = null, $pdo = null)
     {
         $this->freteService = $freteService ?? new FreteRapidoService();
+        $this->pdo = $pdo ?? (function_exists('getConnection') ? getConnection() : null);
     }
 
-    public function handleQuoteRequest()
+    /**
+     * Processa uma solicitação de cotação de frete.
+     * Permite injetar $inputData para facilitar testes.
+     */
+    public function handleQuoteRequest(array $inputData = null)
     {
-        $request_body = file_get_contents('php://input');
-        $data = json_decode($request_body, true);
+        $data = $inputData ?? json_decode(file_get_contents('php://input'), true);
 
+        // Verificação de campos obrigatórios
         if (
             $data === null ||
             !isset($data['origin_cep']) ||
@@ -24,8 +33,8 @@ class QuoteController
             !isset($data['shipper']) ||
             !isset($data['volumes'])
         ) {
-            http_response_code(400);
             echo json_encode([
+                'code' => 400,
                 'error' => 'Requisição inválida. Campos origin_cep, destination_cep, shipper e volumes são obrigatórios.'
             ]);
             return;
@@ -36,17 +45,35 @@ class QuoteController
         $shipper = $data['shipper'];
         $volumes = $data['volumes'];
 
+        // Chama o serviço para obter as ofertas de frete
         $offers = $this->freteService->simularFrete($origin_cep, $destination_cep, $shipper, $volumes);
 
+        // Caso não haja ofertas de frete
         if (empty($offers)) {
-            http_response_code(204);
-            echo json_encode(['message' => 'Nenhuma cotação de frete encontrada.']);
+            echo json_encode([
+                'code' => 204,
+                'message' => 'Nenhuma cotação de frete encontrada.'
+            ]);
             return;
         }
 
-        $pdo = getConnection();
+        // Salva as ofertas no banco de dados, se a conexão com o PDO estiver disponível
+        if ($this->pdo) {
+            $this->saveOffers($offers, $origin_cep, $destination_cep);
+        }
+
+        // Resposta de sucesso com as cotações
+        echo json_encode([
+            'code' => 200,
+            'message' => 'Cotações realizadas com sucesso.',
+            'offers' => $offers
+        ]);
+    }
+
+    private function saveOffers(array $offers, string $origin_cep, string $destination_cep): void
+    {
         foreach ($offers as $offer) {
-            $stmt = $pdo->prepare("
+            $stmt = $this->pdo->prepare("
                 INSERT INTO quotes (
                     origin_cep,
                     destination_cep,
@@ -73,7 +100,5 @@ class QuoteController
                 ':service' => $offer['service'] ?? 'Não informado',
             ]);
         }
-
-        echo json_encode(['message' => 'Cotações realizadas com sucesso.', 'offers' => $offers]);
     }
 }

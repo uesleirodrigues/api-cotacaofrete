@@ -12,24 +12,17 @@ namespace SebastianBergmann\CodeCoverage\Report\Html;
 use function array_values;
 use function arsort;
 use function asort;
-use function assert;
 use function count;
 use function explode;
 use function floor;
 use function json_encode;
 use function sprintf;
 use function str_replace;
-use SebastianBergmann\CodeCoverage\FileCouldNotBeWrittenException;
 use SebastianBergmann\CodeCoverage\Node\AbstractNode;
 use SebastianBergmann\CodeCoverage\Node\Directory as DirectoryNode;
-use SebastianBergmann\CodeCoverage\Node\File as FileNode;
-use SebastianBergmann\Template\Exception;
 use SebastianBergmann\Template\Template;
 
 /**
- * @phpstan-import-type ProcessedClassType from FileNode
- * @phpstan-import-type ProcessedTraitType from FileNode
- *
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
  */
 final class Dashboard extends Renderer
@@ -41,7 +34,7 @@ final class Dashboard extends Renderer
         $template     = new Template(
             $templateName,
             '{{',
-            '}}',
+            '}}'
         );
 
         $this->setCommonTemplateVariables($template, $node);
@@ -62,18 +55,10 @@ final class Dashboard extends Renderer
                 'complexity_method'             => $complexity['method'],
                 'class_coverage_distribution'   => $coverageDistribution['class'],
                 'method_coverage_distribution'  => $coverageDistribution['method'],
-            ],
+            ]
         );
 
-        try {
-            $template->renderTo($file);
-        } catch (Exception $e) {
-            throw new FileCouldNotBeWrittenException(
-                $e->getMessage(),
-                $e->getCode(),
-                $e,
-            );
-        }
+        $template->renderTo($file);
     }
 
     protected function activeBreadcrumb(AbstractNode $node): string
@@ -81,14 +66,12 @@ final class Dashboard extends Renderer
         return sprintf(
             '         <li class="breadcrumb-item"><a href="index.html">%s</a></li>' . "\n" .
             '         <li class="breadcrumb-item active">(Dashboard)</li>' . "\n",
-            $node->name(),
+            $node->name()
         );
     }
 
     /**
-     * @param array<string, ProcessedClassType|ProcessedTraitType> $classes
-     *
-     * @return array{class: non-empty-string, method: non-empty-string}
+     * Returns the data for the Class/Method Complexity charts.
      */
     private function complexity(array $classes, string $baseLink): array
     {
@@ -106,7 +89,7 @@ final class Dashboard extends Renderer
                     sprintf(
                         '<a href="%s">%s</a>',
                         str_replace($baseLink, '', $method['link']),
-                        $methodName,
+                        $methodName
                     ),
                 ];
             }
@@ -117,26 +100,19 @@ final class Dashboard extends Renderer
                 sprintf(
                     '<a href="%s">%s</a>',
                     str_replace($baseLink, '', $class['link']),
-                    $className,
+                    $className
                 ),
             ];
         }
 
-        $class = json_encode($result['class']);
-
-        assert($class !== false);
-
-        $method = json_encode($result['method']);
-
-        assert($method !== false);
-
-        return ['class' => $class, 'method' => $method];
+        return [
+            'class'  => json_encode($result['class']),
+            'method' => json_encode($result['method']),
+        ];
     }
 
     /**
-     * @param array<string, ProcessedClassType|ProcessedTraitType> $classes
-     *
-     * @return array{class: non-empty-string, method: non-empty-string}
+     * Returns the data for the Class / Method Coverage Distribution chart.
      */
     private function coverageDistribution(array $classes): array
     {
@@ -195,21 +171,14 @@ final class Dashboard extends Renderer
             }
         }
 
-        $class = json_encode(array_values($result['class']));
-
-        assert($class !== false);
-
-        $method = json_encode(array_values($result['method']));
-
-        assert($method !== false);
-
-        return ['class' => $class, 'method' => $method];
+        return [
+            'class'  => json_encode(array_values($result['class'])),
+            'method' => json_encode(array_values($result['method'])),
+        ];
     }
 
     /**
-     * @param array<string, ProcessedClassType|ProcessedTraitType> $classes
-     *
-     * @return array{class: string, method: string}
+     * Returns the classes / methods with insufficient coverage.
      */
     private function insufficientCoverage(array $classes, string $baseLink): array
     {
@@ -219,7 +188,7 @@ final class Dashboard extends Renderer
 
         foreach ($classes as $className => $class) {
             foreach ($class['methods'] as $methodName => $method) {
-                if ($method['coverage'] < $this->thresholds->highLowerBound()) {
+                if ($method['coverage'] < $this->highLowerBound) {
                     $key = $methodName;
 
                     if ($className !== '*') {
@@ -230,7 +199,7 @@ final class Dashboard extends Renderer
                 }
             }
 
-            if ($class['coverage'] < $this->thresholds->highLowerBound()) {
+            if ($class['coverage'] < $this->highLowerBound) {
                 $leastTestedClasses[$className] = $class['coverage'];
             }
         }
@@ -243,7 +212,7 @@ final class Dashboard extends Renderer
                 '       <tr><td><a href="%s">%s</a></td><td class="text-right">%d%%</td></tr>' . "\n",
                 str_replace($baseLink, '', $classes[$className]['link']),
                 $className,
-                $coverage,
+                $coverage
             );
         }
 
@@ -255,7 +224,7 @@ final class Dashboard extends Renderer
                 str_replace($baseLink, '', $classes[$class]['methods'][$method]['link']),
                 $methodName,
                 $method,
-                $coverage,
+                $coverage
             );
         }
 
@@ -263,9 +232,7 @@ final class Dashboard extends Renderer
     }
 
     /**
-     * @param array<string, ProcessedClassType|ProcessedTraitType> $classes
-     *
-     * @return array{class: string, method: string}
+     * Returns the project risks according to the CRAP index.
      */
     private function projectRisks(array $classes, string $baseLink): array
     {
@@ -275,7 +242,7 @@ final class Dashboard extends Renderer
 
         foreach ($classes as $className => $class) {
             foreach ($class['methods'] as $methodName => $method) {
-                if ($method['coverage'] < $this->thresholds->highLowerBound() && $method['ccn'] > 1) {
+                if ($method['coverage'] < $this->highLowerBound && $method['ccn'] > 1) {
                     $key = $methodName;
 
                     if ($className !== '*') {
@@ -286,7 +253,7 @@ final class Dashboard extends Renderer
                 }
             }
 
-            if ($class['coverage'] < $this->thresholds->highLowerBound() &&
+            if ($class['coverage'] < $this->highLowerBound &&
                 $class['ccn'] > count($class['methods'])) {
                 $classRisks[$className] = $class['crap'];
             }
@@ -300,7 +267,7 @@ final class Dashboard extends Renderer
                 '       <tr><td><a href="%s">%s</a></td><td class="text-right">%d</td></tr>' . "\n",
                 str_replace($baseLink, '', $classes[$className]['link']),
                 $className,
-                $crap,
+                $crap
             );
         }
 
@@ -312,7 +279,7 @@ final class Dashboard extends Renderer
                 str_replace($baseLink, '', $classes[$class]['methods'][$method]['link']),
                 $methodName,
                 $method,
-                $crap,
+                $crap
             );
         }
 

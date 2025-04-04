@@ -1,13 +1,21 @@
 <?php
 
-require_once dirname(__DIR__) . '/db/database.php';
+if (!defined('TESTING')) {
+    require_once dirname(__DIR__) . '/db/database.php';
+}
 
 class MetricsController
 {
+    private $pdo;
+
+    // Permite injeção de dependência do PDO para testes
+    public function __construct($pdo = null)
+    {
+        $this->pdo = $pdo ?? getConnection();
+    }
+
     public function handleMetricsRequest()
     {
-        $pdo = getConnection();
-
         $limit = isset($_GET['last_quotes']) ? (int)$_GET['last_quotes'] : null;
 
         $sql = "SELECT * FROM quotes ORDER BY id DESC";
@@ -15,7 +23,7 @@ class MetricsController
             $sql .= " LIMIT :limit";
         }
 
-        $stmt = $pdo->prepare($sql);
+        $stmt = $this->pdo->prepare($sql);
         if ($limit !== null && $limit > 0) {
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         }
@@ -23,8 +31,11 @@ class MetricsController
         $quotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($quotes)) {
-            http_response_code(204);
-            echo json_encode(['message' => 'Nenhuma cotação encontrada.']);
+            // Retorno no formato JSON com código 204 (sem conteúdo)
+            echo json_encode([
+                'code' => 204,
+                'message' => 'Nenhuma cotação encontrada.'
+            ]);
             return;
         }
 
@@ -56,7 +67,10 @@ class MetricsController
         $min_price = min($sorted);
         $max_price = max($sorted);
 
+        // Retorno com as métricas e os preços mínimo e máximo
         echo json_encode([
+            'code' => 200,
+            'message' => 'Métricas das cotações.',
             'per_carrier' => $metrics,
             'min_price' => $min_price,
             'max_price' => $max_price,

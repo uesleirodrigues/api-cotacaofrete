@@ -11,40 +11,21 @@ namespace SebastianBergmann\CodeCoverage\StaticAnalysis;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
- *
- * @phpstan-type LinesType array<int, int>
  */
 interface FileAnalyser
 {
-    /**
-     * @return array<string, Interface_>
-     */
-    public function interfacesIn(string $filename): array;
-
-    /**
-     * @return array<string, Class_>
-     */
     public function classesIn(string $filename): array;
 
-    /**
-     * @return array<string, Trait_>
-     */
     public function traitsIn(string $filename): array;
 
-    /**
-     * @return array<string, Function_>
-     */
     public function functionsIn(string $filename): array;
 
-    public function linesOfCodeFor(string $filename): LinesOfCode;
-
     /**
-     * @return LinesType
+     * @psalm-return array{linesOfCode: int, commentLinesOfCode: int, nonCommentLinesOfCode: int}
      */
+    public function linesOfCodeFor(string $filename): array;
+
     public function executableLinesIn(string $filename): array;
 
-    /**
-     * @return LinesType
-     */
     public function ignoredLinesFor(string $filename): array;
 }
