@@ -1,0 +1,15 @@
+{
+    "name": "uesle/api-cotacaofrete",
+    "description": "API de cotacao de frete",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/api/"
+        }
+    },
+    "authors": [
+        {
+            "name": "uesleirodrigues",
+            "email": "57241287+uesleirodrigues@users.noreply.github.com"
+        }
+    ]
+}

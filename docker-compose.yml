@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile
+    container_name: api-php
+    ports:
+      - "8000:80"
+    volumes:
+      - ./src/api/src:/app/src
+      - ./src/config:/app/config
+      - ./src/db:/app/db
+    environment:
+      - APP_ENV=development
+    depends_on:
+      - db
+
+  db:
+    build:
+      context: ./src/db
+      dockerfile: Dockerfile
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+    container_name: database
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: api_cotacao_frete
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_INIT_COMMAND: "--explicit_defaults_for_timestamp=true"
+    ports:
+      - "3307:3306"
+
+volumes:
+  db_data:
